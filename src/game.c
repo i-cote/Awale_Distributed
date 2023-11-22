@@ -123,13 +123,12 @@ enum board_status update_board(struct board * final_board, uint32_t move) {
 
 	}
 
+	b->to_play = OPPONENT(b->to_play);
 
 	memcpy(final_board, &temp_board, sizeof(struct board));
 
 	if(player_won)
 		return GAME_ENDED;
-
-	b->to_play = OPPONENT(b->to_play);
 
 	return NEXT_PLAY;
 }
