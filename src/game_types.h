@@ -3,7 +3,14 @@
 enum player { PLAYER1 = 0, PLAYER2 = 1};
 
 #define OPPONENT(player) (player == PLAYER2 ? PLAYER1 : PLAYER2)
+#define NB_HOLES_PLAYER 6
+#define WINNING_POINTS 25
 
+enum board_status {
+	NEXT_PLAY,
+	INVALID_MOVE,
+	GAME_ENDED
+};
 
 struct board {
     uint32_t holes[12];
