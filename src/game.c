@@ -7,7 +7,7 @@ bool is_opponent_hole(uint32_t hole, enum player self) {
 	return ((hole/NB_HOLES_PLAYER) != self);
 }
 
-bool exits_move_that_feeds_opponent(struct board * b) {
+bool exists_move_that_feeds_opponent(struct board * b) {
 
 	bool move_exists = false;
 	for(int i = NB_HOLES_PLAYER * b->to_play;
@@ -31,7 +31,7 @@ void opponent_captures_its_balls(struct board * b) {
 	}
 }
 
-bool starved_opponent(struct board * b) {
+bool is_starved_opponent(struct board * b) {
 
 	uint32_t sum = 0;
 
@@ -43,7 +43,7 @@ bool starved_opponent(struct board * b) {
 	return !sum;
 }
 
-bool starved_self(struct board * b) {
+bool is_starved_self(struct board * b) {
 
 	uint32_t sum = 0;
 
@@ -61,7 +61,7 @@ int update_board(struct board * final_board, uint32_t move) {
 	memcpy(&temp_board,final_board,sizeof(struct board));
 	struct board * b = &temp_board;
 
-	bool was_starved_opponent = starved_opponent(b);
+	bool was_starved_opponent = is_starved_opponent(b);
 
 	bool player_won = false;
 
@@ -73,7 +73,7 @@ int update_board(struct board * final_board, uint32_t move) {
 	uint32_t nb_balls = b->holes[hole];
 
 	if(nb_balls == 0) {
-		if(!starved_self(b))
+		if(!is_starved_self(b))
 			return INVALID_MOVE;
 		opponent_captures_its_balls(b);
 		memcpy(final_board,&temp_board,sizeof(struct board));
@@ -111,12 +111,12 @@ int update_board(struct board * final_board, uint32_t move) {
 	}
 
 
-	if(!was_starved_opponent && starved_opponent(b))
+	if(!was_starved_opponent && is_starved_opponent(b))
 		return INVALID_MOVE;
 
-	else if(was_starved_opponent && starved_opponent(b)) {
+	else if(was_starved_opponent && is_starved_opponent(b)) {
 
-		if(!exits_move_that_feeds_opponent(final_board))
+		if(!exists_move_that_feeds_opponent(final_board))
 			return GAME_ENDED;
 		else
 			return INVALID_MOVE;
