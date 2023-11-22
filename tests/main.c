@@ -39,4 +39,20 @@ int main() {
 	test_status = test_exists_move_that_feeds_opponent_player_two_should_return_false() ? passed : failed;
 	printf("test_exists_move_that_feeds_opponent_player_two_should_return_false\t%s",
 			test_status);
+
+	test_status = test_is_opponent_hole_player_one_should_return_true() ? passed : failed;
+	printf("test_is_opponent_hole_player_one_should_return_true\t%s",
+			test_status);
+
+	test_status = test_is_opponent_hole_player_one_should_return_false() ? passed : failed;
+	printf("test_is_opponent_hole_player_one_should_return_false\t%s",
+			test_status);
+
+	test_status = test_is_opponent_hole_player_two_should_return_true() ? passed : failed;
+	printf("test_is_opponent_hole_player_two_should_return_true\t%s",
+			test_status);
+
+	test_status = test_is_opponent_hole_player_two_should_return_false() ? passed : failed;
+	printf("test_is_opponent_hole_player_two_should_return_false\t%s",
+			test_status);
 }
