@@ -19,5 +19,7 @@ bool test_is_starved_self_player_one_should_return_true(void);
 bool test_is_starved_self_player_one_should_return_false(void);
 bool test_is_starved_self_player_two_should_return_true(void);
 bool test_is_starved_self_player_two_should_return_false(void);
+bool test_opponent_captures_its_balls_player_one(void);
+bool test_opponent_captures_its_balls_player_two(void);
 
 #endif

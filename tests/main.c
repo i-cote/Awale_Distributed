@@ -105,6 +105,18 @@ int main() {
 	if(test_status == failed)
 		all_tests_pass = false;
 
+	test_status = test_opponent_captures_its_balls_player_one() ? passed : failed;
+	printf("test_opponent_captures_its_balls_player_one\t%s",
+			test_status);
+	if(test_status == failed)
+		all_tests_pass = false;
+
+	test_status = test_opponent_captures_its_balls_player_two() ? passed : failed;
+	printf("test_opponent_captures_its_balls_player_two\t%s",
+			test_status);
+	if(test_status == failed)
+		all_tests_pass = false;
+
 
 
 	if(all_tests_pass)
