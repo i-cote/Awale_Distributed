@@ -15,5 +15,9 @@ bool test_is_opponent_hole_player_one_should_return_true(void);
 bool test_is_opponent_hole_player_one_should_return_false(void);
 bool test_is_opponent_hole_player_two_should_return_true(void);
 bool test_is_opponent_hole_player_two_should_return_false(void);
+bool test_is_starved_self_player_one_should_return_true(void);
+bool test_is_starved_self_player_one_should_return_false(void);
+bool test_is_starved_self_player_two_should_return_true(void);
+bool test_is_starved_self_player_two_should_return_false(void);
 
 #endif

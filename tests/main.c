@@ -15,7 +15,6 @@ int main() {
 	if(test_status == failed)
 		all_tests_pass = false;
 
-
 	test_status = test_is_starved_opponent_player_one_should_return_false() ? passed : failed;
 	printf("test_is_starved_opponent_player_one_should_return_false\t%s",
 			test_status);
@@ -81,6 +80,31 @@ int main() {
 			test_status);
 	if(test_status == failed)
 		all_tests_pass = false;
+
+	test_status = test_is_starved_self_player_one_should_return_true() ? passed : failed;
+	printf("test_is_starved_self_player_one_should_return_true\t%s",
+			test_status);
+	if(test_status == failed)
+		all_tests_pass = false;
+
+	test_status = test_is_starved_self_player_one_should_return_false() ? passed : failed;
+	printf("test_is_starved_self_player_one_should_return_false\t%s",
+			test_status);
+	if(test_status == failed)
+		all_tests_pass = false;
+
+	test_status = test_is_starved_self_player_two_should_return_true() ? passed : failed;
+	printf("test_is_starved_self_player_two_should_return_true\t%s",
+			test_status);
+	if(test_status == failed)
+		all_tests_pass = false;
+
+	test_status = test_is_starved_self_player_two_should_return_false() ? passed : failed;
+	printf("test_is_starved_self_player_two_should_return_false\t%s",
+			test_status);
+	if(test_status == failed)
+		all_tests_pass = false;
+
 
 
 	if(all_tests_pass)

@@ -4,6 +4,7 @@
 bool is_starved_opponent(struct board * b);
 bool exists_move_that_feeds_opponent(struct board * b);
 bool is_opponent_hole(uint32_t hole, enum player self);
+bool is_starved_self(struct board * b);
 
 bool test_is_starved_opponent_player_one_should_return_true() {
 	struct board b = {
@@ -107,4 +108,36 @@ bool test_is_opponent_hole_player_two_should_return_false() {
 			passed = false;
 	}
 	return passed;
+}
+
+bool test_is_starved_self_player_one_should_return_true() {
+	struct board b = {
+	.holes = {0,0,0,0,0,0,1,2,0,7,0,0},
+	.to_play = PLAYER1
+	};
+	return (is_starved_self(&b) == true);
+}
+
+bool test_is_starved_self_player_one_should_return_false() {
+	struct board b = {
+	.holes = {2,5,0,4,0,7,0,0,0,0,0,1},
+	.to_play = PLAYER1
+	};
+	return (is_starved_self(&b) == false);
+}
+
+bool test_is_starved_self_player_two_should_return_true() {
+	struct board b = {
+	.holes = {2,7,8,0,3,0,0,0,0,0,0,0},
+	.to_play = PLAYER2
+	};
+	return (is_starved_self(&b) == true);
+}
+
+bool test_is_starved_self_player_two_should_return_false() {
+	struct board b = {
+	.holes = {0,0,0,0,0,7,0,3,9,0,7,1},
+	.to_play = PLAYER2
+	};
+	return (is_starved_self(&b) == false);
 }
