@@ -1,3 +1,5 @@
+#ifndef UI_H
+#define UI_H
 #include "game_types.h"
 
 struct ui_state {
@@ -12,3 +14,4 @@ void redraw(const struct board* board, enum player player, const struct ui_state
 
 void ui_init(void);
 void ui_close(void);
+#endif
