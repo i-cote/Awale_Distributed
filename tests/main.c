@@ -117,6 +117,24 @@ int main() {
 	if(test_status == failed)
 		all_tests_pass = false;
 
+	test_status = test_update_board_normal_turn_with_capture_should_return_NEXT_PLAY() ? passed : failed;
+	printf("test_update_board_normal_turn_with_capture_should_return_NEXT_PLAY\t%s",
+			test_status);
+	if(test_status == failed)
+		all_tests_pass = false;
+
+	test_status = test_update_board_user_selected_empty_hole_should_return_INVALID_MOVE() ? passed : failed;
+	printf("test_update_board_user_selected_empty_hole_should_return_INVALID_MOVE\t%s",
+			test_status);
+	if(test_status == failed)
+		all_tests_pass = false;
+
+	test_status = test_update_board_player_ends_turn_with_25_or_plus_should_return_GAME_ENDED() ? passed : failed;
+	printf("test_update_board_player_ends_turn_with_25_or_plus_should_return_GAME_ENDED\t%s",
+			test_status);
+	if(test_status == failed)
+		all_tests_pass = false;
+
 
 
 	if(all_tests_pass)

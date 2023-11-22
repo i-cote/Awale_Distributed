@@ -21,5 +21,8 @@ bool test_is_starved_self_player_two_should_return_true(void);
 bool test_is_starved_self_player_two_should_return_false(void);
 bool test_opponent_captures_its_balls_player_one(void);
 bool test_opponent_captures_its_balls_player_two(void);
+bool test_update_board_normal_turn_with_capture_should_return_NEXT_PLAY(void);
+bool test_update_board_user_selected_empty_hole_should_return_INVALID_MOVE(void);
+bool test_update_board_player_ends_turn_with_25_or_plus_should_return_GAME_ENDED(void);
 
 #endif
