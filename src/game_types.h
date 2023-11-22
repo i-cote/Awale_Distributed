@@ -1,3 +1,6 @@
+#ifndef GAME_TYPES_H
+#define GAME_TYPES_H
+
 #include <stdint.h>
 
 enum player { PLAYER1 = 0, PLAYER2 = 1};
@@ -17,3 +20,4 @@ struct board {
     uint32_t points[2];
     enum player to_play;
 };
+#endif
