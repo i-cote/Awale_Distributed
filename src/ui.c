@@ -1,5 +1,3 @@
-#ifndef UI_H
-#define UI_H
 #include "ui.h"
 #include <stdlib.h>
 #include <curses.h>
@@ -93,4 +91,3 @@ void redraw(const struct board* board, enum player player, const struct ui_state
         }
     }
 }
-#endif

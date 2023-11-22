@@ -1,9 +1,53 @@
+#include "protocol.h"
+#include <arpa/inet.h>
 #include "ui.h"
 #include <curses.h>
 #include <ncurses.h>
 #include <stdio.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+void demo_ui(void);
+void demo_conn(void);
 
 int main(void) {
+    // demo_ui();
+    demo_conn();
+    return 0;
+}
+
+void demo_conn(void) {
+    struct connection conn = {0};
+    struct sockaddr_in cli_addr, serv_addr = {0};
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serv_addr.sin_port = htons(8080);
+
+    if ((conn.socketfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("socket error\n");
+        exit(1);
+    }
+
+    /* effectue la connection */
+    if (connect(conn.socketfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        printf("socket error\n");
+        exit(1);
+    }
+
+    printf("connected\n");
+    while (1) {
+        struct packet packet = receive(&conn);
+        printf("%d ", packet.type);
+        if (packet.payload != NULL) {
+            printf("%s\n", packet.payload);
+        } else {
+            printf("\n");
+        }
+    }
+}
+
+void demo_ui(void) {
     ui_init();
 
     struct board b = {
@@ -40,5 +84,4 @@ int main(void) {
     }
     ui_close();
     endwin();
-    return 0;
 }
