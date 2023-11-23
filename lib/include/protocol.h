@@ -7,13 +7,19 @@
 #define UNKNOWN_TYPE -2
 #define SOCKET_ERROR -1
 #define SOCKET_SUCCESS 0
-#define PACKET_INCOMPLETE 1
-#define PLAYER_ASSIGED 2 // assign <0|1>
-#define SPECATOR_ASSIGNED 3 // spec_assign
-#define DECLARE_PLAYER 4 // player
-#define DECLARE_SPEC 5 // spec
-#define MAKE_MOVE 6 // move <0..5>
-#define BOARD_UPDATED 7 // update <holes> <scores> <to_play>
+enum packet_type {
+    PACKET_INCOMPLETE = 1,
+    PLAYER_ASSIGN, // assign <0|1>
+    LOGIN, // login <player>
+    MAKE_MOVE, // move <0..5>
+    BOARD_UPDATED, // update <holes> <scores> <to_play>
+    PLAYER_JOIN_LOBBY, // player_join <name>
+    PLAYER_QUIT_LOBBY, // player_quit <name>
+    CHALLENGE_PLAYER, // challenge <name>
+    CHALLENGE_RECEIVE,
+    CHALLENGE_ACCEPT, // challenge_refuse <name>
+    CHALLENGE_REFUSE, // challenge_refuse <name>
+};
 
 #define BUFFER_LEN 1024
 struct connection {
@@ -28,17 +34,13 @@ struct packet {
     const char* payload;
 };
 
-int send_declare_player(struct connection*);
-
-int send_declare_spec(struct connection*);
+int send_login(struct connection* conn, const char* name);
 
 int send_move(struct connection*, int hole);
 
 int send_update(struct connection* conn, const struct board* board);
 
 int send_player_assigned(struct connection* conn, enum player player);
-
-int send_spec_assigned(struct connection* conn);
 
 struct packet receive(struct connection* conn);
 

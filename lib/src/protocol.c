@@ -7,6 +7,26 @@
 
 #define PACKET_BUFFER_SIZE 256
 
+struct packet_lookup_entry {
+    const char* text;
+    enum packet_type type;
+};
+
+const char* LOOKUP_TABLE[] = {
+    [LOGIN] = "login",
+    [PLAYER_ASSIGN] = "assign",
+    [MAKE_MOVE] = "move",
+    [BOARD_UPDATED] = "update",
+    [PLAYER_JOIN_LOBBY] = "player_join",
+    [PLAYER_QUIT_LOBBY] = "player_quit",
+    [CHALLENGE_PLAYER] = "challenge",
+    [CHALLENGE_RECEIVE] = "challenge_receive",
+    [CHALLENGE_ACCEPT] = "challenge_accept",
+    [CHALLENGE_REFUSE] = "challenge_refuse",
+};
+
+const size_t LOOKUP_TABLE_SIZE = sizeof(LOOKUP_TABLE) / sizeof(const char*);
+
 static int send(int socketfd, const char* payload) {
     int len = strlen(payload);
     int pos = 0;
@@ -21,24 +41,22 @@ static int send(int socketfd, const char* payload) {
     return SOCKET_SUCCESS;
 }
 
-int send_declare_player(struct connection* conn) {
-    return send(conn->socketfd, "play\n");
-}
-
-int send_declare_spec(struct connection* conn) {
-    return send(conn->socketfd, "spec\n");
+int send_login(struct connection* conn, const char* name) {
+    char packet_buffer[PACKET_BUFFER_SIZE];
+    sprintf(packet_buffer, "%s %s\n", LOOKUP_TABLE[LOGIN], name);
+    return send(conn->socketfd, packet_buffer);
 }
 
 int send_move(struct connection* conn, int hole) {
     char packet_buffer[PACKET_BUFFER_SIZE];
-    sprintf(packet_buffer, "move %d\n", hole);
+    sprintf(packet_buffer, "%s %d\n", LOOKUP_TABLE[MAKE_MOVE], hole);
     return send(conn->socketfd, packet_buffer);
 }
 
 int send_update(struct connection* conn, const struct board* board) {
     char packet_buffer[PACKET_BUFFER_SIZE];
     size_t current_size = 0;
-    current_size += sprintf(packet_buffer, "update ");
+    current_size += sprintf(packet_buffer, "%s ", LOOKUP_TABLE[BOARD_UPDATED]);
     for (int i = 0; i < 12; i++) {
         current_size += sprintf(packet_buffer + current_size, "%d ", board->holes[i]);
     }
@@ -55,12 +73,8 @@ int send_update(struct connection* conn, const struct board* board) {
 
 int send_player_assigned(struct connection* conn, enum player player) {
     char packet_buffer[PACKET_BUFFER_SIZE];
-    sprintf(packet_buffer, "assign %d\n", player);
+    sprintf(packet_buffer, "%s %d\n", LOOKUP_TABLE[PLAYER_ASSIGN], player);
     return send(conn->socketfd, packet_buffer);
-}
-
-int send_spec_assigned(struct connection* conn) {
-    return send(conn->socketfd, "spec_assign\n");
 }
 
 struct packet receive(struct connection* conn) {
@@ -101,20 +115,12 @@ struct packet receive(struct connection* conn) {
     }
 
     const char* type_str = conn->read_buffer;
-    if (strcmp(type_str, "player") == 0) {
-        packet.type = DECLARE_PLAYER;
-    } else if (strcmp(type_str, "spec") == 0) {
-        packet.type = DECLARE_SPEC;
-    } else if (strcmp(type_str, "move") == 0) {
-        packet.type = MAKE_MOVE;
-    } else if (strcmp(type_str, "update") == 0) {
-        packet.type = BOARD_UPDATED;
-    } else if (strcmp(type_str, "assign") == 0) {
-        packet.type = PLAYER_ASSIGED;
-    } else if (strcmp(type_str, "spec_assign") == 0) {
-        packet.type = SPECATOR_ASSIGNED;
-    } else {
-        packet.type = UNKNOWN_TYPE;
+    for (int i = 0; i < LOOKUP_TABLE_SIZE; i++) {
+        if (LOOKUP_TABLE[i] == NULL) continue;
+        if (strcmp(LOOKUP_TABLE[i], type_str) == 0) {
+            packet.type = i;
+            break;
+        }
     }
 
     return packet;
