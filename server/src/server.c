@@ -70,7 +70,7 @@ void server_disconnect_player(struct server* server, int index) {
     server->players[index].connection = NULL;
 }
 
-void server_on_new_message(struct server* server, int index,
+void server_on_new_packet(struct server* server, int index,
                            const struct packet* packet) {
     struct connected_player* source = &server->players[index];
 

@@ -22,6 +22,6 @@ void server_clean_disconnected_players(struct server* server);
 
 void server_disconnect_player(struct server* server, int index);
 
-void server_on_new_message(struct server* server, int index, const struct packet* packet);
+void server_on_new_packet(struct server* server, int index, const struct packet* packet);
 
 #endif

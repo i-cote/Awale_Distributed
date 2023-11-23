@@ -10,7 +10,7 @@
 int main(void) {
     printf("Hello from server\n");
     struct server server = {0};
-    server_init(&server, 8081);
+    server_init(&server, 8080);
 
     struct pollfd fds[MAX_PLAYERS + 2]; // 1 for each connections + 1 for stdin
                                         // + 1 for listening
@@ -62,7 +62,7 @@ int main(void) {
                 if (packet.type < 0) {
                     server_disconnect_player(&server, i);
                 } else if (packet.type != UNKNOWN_TYPE && packet.type != PACKET_INCOMPLETE) {
-                    server_on_new_message(&server, i, &packet);
+                    server_on_new_packet(&server, i, &packet);
                 }
             }
         }
