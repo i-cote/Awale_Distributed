@@ -23,9 +23,24 @@ const char* LOOKUP_TABLE[] = {
     [CHALLENGE_RECEIVE] = "challenge_receive",
     [CHALLENGE_ACCEPT] = "challenge_accept",
     [CHALLENGE_REFUSE] = "challenge_refuse",
+    [ACK] = "ack",
+    [ERROR] = "error",
 };
 
 const size_t LOOKUP_TABLE_SIZE = sizeof(LOOKUP_TABLE) / sizeof(const char*);
+
+struct connection* create_connection(int socketfd) {
+    struct connection* conn = malloc(sizeof(struct connection));
+    memset(conn, 0, sizeof(struct connection));
+    conn->socketfd = socketfd;
+
+    return conn;
+}
+
+void destroy_connection(struct connection* connection) {
+    close(connection->socketfd);
+    free(connection);
+}
 
 static int send(int socketfd, const char* payload) {
     int len = strlen(payload);
@@ -39,6 +54,18 @@ static int send(int socketfd, const char* payload) {
         pos += r;
     }
     return SOCKET_SUCCESS;
+}
+
+int send_error(struct connection* conn, const char* err) {
+    char packet_buffer[PACKET_BUFFER_SIZE];
+    sprintf(packet_buffer, "%s %s\n", LOOKUP_TABLE[ERROR], err);
+    return send(conn->socketfd, packet_buffer);
+}
+
+int send_ack(struct connection* conn) {
+    char packet_buffer[PACKET_BUFFER_SIZE];
+    sprintf(packet_buffer, "%s\n", LOOKUP_TABLE[ACK]);
+    return send(conn->socketfd, packet_buffer);
 }
 
 int send_login(struct connection* conn, const char* name) {
@@ -58,15 +85,17 @@ int send_update(struct connection* conn, const struct board* board) {
     size_t current_size = 0;
     current_size += sprintf(packet_buffer, "%s ", LOOKUP_TABLE[BOARD_UPDATED]);
     for (int i = 0; i < 12; i++) {
-        current_size += sprintf(packet_buffer + current_size, "%d ", board->holes[i]);
+        current_size +=
+            sprintf(packet_buffer + current_size, "%d ", board->holes[i]);
     }
 
     for (int i = 0; i < 2; i++) {
-        current_size += sprintf(packet_buffer + current_size, "%d ", board->points[i]);
+        current_size +=
+            sprintf(packet_buffer + current_size, "%d ", board->points[i]);
     }
 
-    
-    current_size += sprintf(packet_buffer + current_size, "%d\n", board->to_play);
+    current_size +=
+        sprintf(packet_buffer + current_size, "%d\n", board->to_play);
 
     return send(conn->socketfd, packet_buffer);
 }
@@ -104,6 +133,7 @@ struct packet receive(struct connection* conn) {
         // The packet is not complete yet we must wait the next message
         return packet;
     }
+    packet.type = UNKNOWN_TYPE;
     // Null terminate the payload
     *terminator = '\0';
     conn->last_packet_size = terminator - conn->read_buffer + 1;
@@ -116,7 +146,8 @@ struct packet receive(struct connection* conn) {
 
     const char* type_str = conn->read_buffer;
     for (int i = 0; i < LOOKUP_TABLE_SIZE; i++) {
-        if (LOOKUP_TABLE[i] == NULL) continue;
+        if (LOOKUP_TABLE[i] == NULL)
+            continue;
         if (strcmp(LOOKUP_TABLE[i], type_str) == 0) {
             packet.type = i;
             break;

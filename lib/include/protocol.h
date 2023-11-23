@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include "game_types.h"
 
-#define UNKNOWN_TYPE -2
 #define SOCKET_ERROR -1
 #define SOCKET_SUCCESS 0
 enum packet_type {
-    PACKET_INCOMPLETE = 1,
+    UNKNOWN_TYPE = 0,
+    PACKET_INCOMPLETE,
     PLAYER_ASSIGN, // assign <0|1>
     LOGIN, // login <player>
     MAKE_MOVE, // move <0..5>
@@ -19,6 +19,8 @@ enum packet_type {
     CHALLENGE_RECEIVE,
     CHALLENGE_ACCEPT, // challenge_refuse <name>
     CHALLENGE_REFUSE, // challenge_refuse <name>
+    ACK,
+    ERROR,
 };
 
 #define BUFFER_LEN 1024
@@ -33,6 +35,13 @@ struct packet {
     int type;
     const char* payload;
 };
+
+struct connection* create_connection(int socketfd);
+void destroy_connection(struct connection* connection);
+
+int send_error(struct connection* conn, const char* err);
+
+int send_ack(struct connection* conn);
 
 int send_login(struct connection* conn, const char* name);
 
