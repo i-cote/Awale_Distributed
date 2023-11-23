@@ -10,6 +10,7 @@ enum player_state {
     LOBBY,
     PLAY,
     SPEC,
+    DISCONNECTED,
 };
 
 struct connected_player {

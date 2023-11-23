@@ -57,6 +57,7 @@ void server_clean_disconnected_players(struct server* server) {
     for (int i = 0; i < server->player_count; i++) {
         if (server->players[i].connection == NULL) {
             server->players[i] = server->players[server->player_count - 1];
+            server->player_count--;
             while (server->player_count > 0 &&
                    server->players[server->player_count - 1].connection ==
                        NULL) {
@@ -67,11 +68,17 @@ void server_clean_disconnected_players(struct server* server) {
 }
 void server_disconnect_player(struct server* server, int index) {
     destroy_connection(server->players[index].connection);
+    enum player_state last_state = server->players[index].state;
+    server->players[index].state = DISCONNECTED;
     server->players[index].connection = NULL;
+    printf("disconnected\n");
+
+    if (last_state == LOBBY)
+        server_send_packet_to_lobby(server, PLAYER_QUIT_LOBBY, server->players[index].name);
 }
 
 void server_on_new_packet(struct server* server, int index,
-                           const struct packet* packet) {
+                          const struct packet* packet) {
     struct connected_player* source = &server->players[index];
 
     switch (packet->type) {
@@ -82,15 +89,28 @@ void server_on_new_packet(struct server* server, int index,
         }
 
         for (int i = 0; i < server->player_count; i++) {
-            if (strncmp(server->players[i].name, packet->payload, MAX_NAME_LEN) == 0) {
+            if (strncmp(server->players[i].name, packet->payload,
+                        MAX_NAME_LEN) == 0) {
                 send_error(source->connection, "Name already used");
                 return;
             }
         }
 
-        strncpy(source->name, packet->payload, MAX_NAME_LEN);
-        source->state = LOBBY;
         send_ack(source->connection);
+        strncpy(source->name, packet->payload, MAX_NAME_LEN);
+        for (int i = 0; i < server->player_count; i++) {
+            if (server->players[i].state == LOBBY)
+                send_packet(source->connection, PLAYER_JOIN_LOBBY, server->players[i].name);
+        }
+        server_send_packet_to_lobby(server, PLAYER_JOIN_LOBBY, source->name);
+        source->state = LOBBY;
         break;
+    }
+}
+void server_send_packet_to_lobby(struct server* server, enum packet_type type,
+                                 const char* payload) {
+    for (int i = 0; i < server->player_count; i++) {
+        if (server->players[i].state == LOBBY)
+            send_packet(server->players[i].connection, type, payload);
     }
 }

@@ -39,6 +39,8 @@ struct packet {
 struct connection* create_connection(int socketfd);
 void destroy_connection(struct connection* connection);
 
+int send_packet(struct connection* conn, enum packet_type type, const char* payload);
+
 int send_error(struct connection* conn, const char* err);
 
 int send_ack(struct connection* conn);

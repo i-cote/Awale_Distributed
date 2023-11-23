@@ -56,6 +56,12 @@ static int send(int socketfd, const char* payload) {
     return SOCKET_SUCCESS;
 }
 
+int send_packet(struct connection* conn, enum packet_type type, const char* payload) {
+    char packet_buffer[PACKET_BUFFER_SIZE];
+    sprintf(packet_buffer, "%s %s\n", LOOKUP_TABLE[type], payload);
+    return send(conn->socketfd, packet_buffer);
+}
+
 int send_error(struct connection* conn, const char* err) {
     char packet_buffer[PACKET_BUFFER_SIZE];
     sprintf(packet_buffer, "%s %s\n", LOOKUP_TABLE[ERROR], err);

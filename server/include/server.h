@@ -24,4 +24,6 @@ void server_disconnect_player(struct server* server, int index);
 
 void server_on_new_packet(struct server* server, int index, const struct packet* packet);
 
+void server_send_packet_to_lobby(struct server* server, enum packet_type type, const char* payload);
+
 #endif
