@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define PACKET_BUFFER_SIZE 256
+
 static int send(int socketfd, const char* payload) {
     int len = strlen(payload);
     int pos = 0;
@@ -28,9 +30,37 @@ int send_declare_spec(struct connection* conn) {
 }
 
 int send_move(struct connection* conn, int hole) {
-    char message[256];
-    snprintf(message, 256, "move %d\n", hole);
-    return send(conn->socketfd, message);
+    char packet_buffer[PACKET_BUFFER_SIZE];
+    sprintf(packet_buffer, "move %d\n", hole);
+    return send(conn->socketfd, packet_buffer);
+}
+
+int send_update(struct connection* conn, const struct board* board) {
+    char packet_buffer[PACKET_BUFFER_SIZE];
+    size_t current_size = 0;
+    current_size += sprintf(packet_buffer, "update ");
+    for (int i = 0; i < 12; i++) {
+        current_size += sprintf(packet_buffer + current_size, "%d ", board->holes[i]);
+    }
+
+    for (int i = 0; i < 2; i++) {
+        current_size += sprintf(packet_buffer + current_size, "%d ", board->points[i]);
+    }
+
+    
+    current_size += sprintf(packet_buffer + current_size, "%d\n", board->to_play);
+
+    return send(conn->socketfd, packet_buffer);
+}
+
+int send_player_assigned(struct connection* conn, enum player player) {
+    char packet_buffer[PACKET_BUFFER_SIZE];
+    sprintf(packet_buffer, "assign %d\n", player);
+    return send(conn->socketfd, packet_buffer);
+}
+
+int send_spec_assigned(struct connection* conn) {
+    return send(conn->socketfd, "spec_assign\n");
 }
 
 struct packet receive(struct connection* conn) {

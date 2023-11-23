@@ -2,6 +2,7 @@
 #define PROTOCOL_H
 
 #include <stdlib.h>
+#include "game_types.h"
 
 #define UNKNOWN_TYPE -2
 #define SOCKET_ERROR -1
@@ -32,6 +33,12 @@ int send_declare_player(struct connection*);
 int send_declare_spec(struct connection*);
 
 int send_move(struct connection*, int hole);
+
+int send_update(struct connection* conn, const struct board* board);
+
+int send_player_assigned(struct connection* conn, enum player player);
+
+int send_spec_assigned(struct connection* conn);
 
 struct packet receive(struct connection* conn);
 

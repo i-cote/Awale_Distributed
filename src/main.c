@@ -36,6 +36,11 @@ void demo_conn(void) {
     }
 
     printf("connected\n");
+    struct board b = {
+        .to_play = PLAYER1,
+        .holes = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+        .points = {2, 3},
+    };
     while (1) {
         struct packet packet = receive(&conn);
         printf("%d ", packet.type);
@@ -44,6 +49,7 @@ void demo_conn(void) {
         } else {
             printf("\n");
         }
+        send_update(&conn, &b);
     }
 }
 
