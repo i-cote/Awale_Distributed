@@ -10,7 +10,7 @@
 int main(void) {
     printf("Hello from server\n");
     struct server server = {0};
-    server_init(&server, 8081);
+    server_init(&server, 8080);
 
     struct pollfd fds[MAX_PLAYERS + 2]; // 1 for each connections + 1 for stdin
                                         // + 1 for listening
