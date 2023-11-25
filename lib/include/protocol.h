@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include "game_types.h"
 
+#define MAX_PLAYERS 128
+
 #define SOCKET_ERROR -1
 #define SOCKET_SUCCESS 0
 enum packet_type {

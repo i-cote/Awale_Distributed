@@ -28,7 +28,7 @@ int main(void) {
         fds[server.player_count + 1].fd = STDIN_FILENO;
         fds[server.player_count + 1].events = POLLIN;
 
-        if (poll(fds, server.player_count + 2, 0) == -1) {
+        if (poll(fds, server.player_count + 2, -1) == -1) {
             perror("epoll error");
             return errno;
         }

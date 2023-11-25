@@ -1,31 +1,19 @@
 #ifndef UI_H
 #define UI_H
-#include "game_types.h"
+
+#include "app.h"
 
 #define DEFAULT_COLOR 1
 #define PLAYING_COLOR 2
 #define SELECTION_COLOR 3
 
-struct client_state {
-    struct board board;
-    enum player current_player;
-};
-
-struct ui_state {
-    int selected;
-};
-
 struct ui_window {
-    void (*open)();
-    struct ui_window* (*on_key_press)(int);
-    void (*update)(struct client_state*);
-    void (*close)();
+    void (*open)(struct app_state*);
+    void (*on_key_press)(struct app_state*, int);
+    void (*update)(struct app_state*, enum event*);
+    void (*close)(struct app_state*);
 };
 
-/*
- * Draw the board to the screen from the view point of player
- */
-void redraw(const struct board* board, enum player player, const struct ui_state* state);
 
 
 void ui_init(void);
