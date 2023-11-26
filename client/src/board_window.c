@@ -129,7 +129,7 @@ void board_window_on_key_press(struct app_state* state, int key) {
 }
 
 
-void board_window_update(struct app_state* state, enum event* event) {
+void board_window_update(struct app_state* state, enum event event) {
 
 }
 

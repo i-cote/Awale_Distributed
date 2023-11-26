@@ -2,6 +2,7 @@
 #include "lobby_window.h"
 
 #include "app.h"
+#include "player_list.h"
 #include <curses.h>
 #include <menu.h>
 #include <ncurses.h>
@@ -18,22 +19,33 @@ struct ui_window lobby_window = {
 static ITEM* items[MAX_PLAYERS + 1];
 static MENU* menu;
 
-void lobby_window_open(struct app_state* state) {
-    clear();
-    items[0] = new_item("ewan", "");
-    items[1] = new_item("irvin", "");
-    items[2] = NULL;
+static void create_menu(struct app_state* state) {
+    size_t i = 0;
+    PLAYER_FOREACH(player, state->players_in_lobby) {
+        items[i++] = new_item(player->name, "");
+    }
+    items[i] = NULL;
 
     menu = new_menu(items);
     post_menu(menu);
 }
 
-void lobby_window_close(struct app_state* state) {
+static void destroy_menu() {
     unpost_menu(menu);
     free_menu(menu);
     for (int i = 0; items[i] != NULL; i++) {
         free_item(items[i]);
     }
+    items[0] = NULL;
+}
+
+void lobby_window_open(struct app_state* state) {
+    clear();
+    create_menu(state);
+}
+
+void lobby_window_close(struct app_state* state) {
+    destroy_menu();
 }
 
 void lobby_window_on_key_press(struct app_state* state, int key) {
@@ -50,4 +62,10 @@ void lobby_window_on_key_press(struct app_state* state, int key) {
     }
 }
 
-void lobby_window_update(struct app_state* state, enum event* event) {}
+void lobby_window_update(struct app_state* state, enum event event) {
+    if (event == EV_LOBBY_UPDATE) {
+        destroy_menu();
+        erase();
+        create_menu(state);
+    }
+}

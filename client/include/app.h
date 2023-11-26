@@ -19,6 +19,7 @@ struct app_state {
     struct board board;
     enum player current_player;
     struct connection* connection;
+    struct player_list* players_in_lobby;
     enum state state;
 };
 

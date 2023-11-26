@@ -1,6 +1,7 @@
 #include "app.h"
 #include "board_window.h"
 #include "name_window.h"
+#include "player_list.h"
 #include "protocol.h"
 #include "ui.h"
 #include <curses.h>

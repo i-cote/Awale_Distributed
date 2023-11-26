@@ -39,7 +39,7 @@ void message_window_on_key_press(struct app_state* state, int key) {
     }
 }
 
-void message_window_update(struct app_state* state, enum event* event) {}
+void message_window_update(struct app_state* state, enum event event) {}
 
 void message_window_set_message(const char* format, ...) {
     va_list arglist;

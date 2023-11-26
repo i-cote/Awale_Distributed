@@ -1,6 +1,10 @@
 #include "protocol.h"
 #include "string.h"
+#include <asm-generic/errno-base.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <linux/socket.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -31,6 +35,7 @@ const size_t LOOKUP_TABLE_SIZE = sizeof(LOOKUP_TABLE) / sizeof(const char*);
 
 struct connection* create_connection(int socketfd) {
     struct connection* conn = malloc(sizeof(struct connection));
+    fcntl(socketfd, F_SETFL, O_NONBLOCK);
     memset(conn, 0, sizeof(struct connection));
     conn->socketfd = socketfd;
 
@@ -42,6 +47,39 @@ void destroy_connection(struct connection* connection) {
     free(connection);
 }
 
+bool connection_need_write(struct connection* conn) {
+    return conn->write_buf_size > 0;
+}
+
+int connection_dispatch(struct connection* conn) {
+    int total_written = 0;
+    int written = 0;
+    while (total_written < conn->write_buf_size &&
+           (written = write(conn->socketfd, conn->write_buffer + total_written,
+                            conn->write_buf_size - total_written)) > 0) {
+
+        total_written += written;
+    }
+
+    if (total_written == conn->write_buf_size) {
+        conn->write_buf_size = 0;
+    } else {
+        memmove(conn->write_buffer, conn->write_buffer + total_written,
+                conn->write_buf_size - total_written);
+        conn->write_buf_size -= total_written;
+    }
+
+    if (written == 0) {
+        return SOCKET_ERROR;
+    } else if (written == -1) {
+        if (errno == EAGAIN) {
+            return SOCKET_SUCCESS;
+        }
+        return SOCKET_ERROR;
+    }
+
+    else return SOCKET_SUCCESS;
+}
 static int send(int socketfd, const char* payload) {
     int len = strlen(payload);
     int pos = 0;
@@ -56,10 +94,41 @@ static int send(int socketfd, const char* payload) {
     return SOCKET_SUCCESS;
 }
 
-int send_packet(struct connection* conn, enum packet_type type, const char* payload) {
+bool send_packet(struct connection* conn, enum packet_type type,
+                 const char* payload_fmt, ...) {
     char packet_buffer[PACKET_BUFFER_SIZE];
-    sprintf(packet_buffer, "%s %s\n", LOOKUP_TABLE[type], payload);
-    return send(conn->socketfd, packet_buffer);
+    int packet_size = 0;
+    va_list arglist;
+
+    packet_size +=
+        snprintf(packet_buffer, PACKET_BUFFER_SIZE, "%s ", LOOKUP_TABLE[type]);
+    if (packet_size >= PACKET_BUFFER_SIZE) {
+        return false;
+    }
+
+    va_start(arglist, payload_fmt);
+    packet_size +=
+        vsnprintf(packet_buffer + packet_size, PACKET_BUFFER_SIZE - packet_size,
+                  payload_fmt, arglist);
+    va_end(arglist);
+
+    if (PACKET_BUFFER_SIZE < packet_size + 1) {
+        return false;
+    }
+    packet_buffer[packet_size++] = '\n';
+
+    if (BUFFER_LEN - conn->write_buf_size < packet_size) {
+        return false;
+    }
+
+    memcpy(conn->write_buffer + conn->write_buf_size, packet_buffer,
+           packet_size);
+
+    conn->write_buf_size += packet_size;
+
+    return true;
+    // vsnprintf(message, MAX_MESSAGE_SIZE, format, arglist);
+    // send(conn->socketfd, packet_buffer);
 }
 
 int send_error(struct connection* conn, const char* err) {
@@ -116,21 +185,29 @@ struct packet receive(struct connection* conn) {
     // First we clear the last payload to make space in the buffer
     if (conn->last_packet_size > 0) {
         memmove(conn->read_buffer, conn->read_buffer + conn->last_packet_size,
-                conn->buf_size - conn->last_packet_size);
-        conn->buf_size -= conn->last_packet_size;
+                conn->read_buf_size - conn->last_packet_size);
+        conn->read_buf_size -= conn->last_packet_size;
         conn->last_packet_size = 0;
+    } else {
+        int bytes_read =
+            read(conn->socketfd, conn->read_buffer + conn->read_buf_size,
+                 BUFFER_LEN - conn->read_buf_size - 1);
+
+        if (bytes_read < 0) {
+            if (errno == EAGAIN) {
+                return (struct packet){.type = PACKET_INCOMPLETE};
+            }
+            return (struct packet){.type = SOCKET_ERROR};
+        }
+
+        if (bytes_read == 0) {
+            return (struct packet){.type = SOCKET_ERROR};
+        }
+
+        conn->read_buf_size += bytes_read;
+        // 0 terminate our buffer to be able to use string method on it
+        conn->read_buffer[conn->read_buf_size] = 0;
     }
-
-    size_t bytes_read = read(conn->socketfd, conn->read_buffer + conn->buf_size,
-                             BUFFER_LEN - conn->buf_size - 1);
-
-    if (bytes_read <= 0) {
-        return (struct packet){.type = SOCKET_ERROR};
-    }
-
-    conn->buf_size += bytes_read;
-    // 0 terminate our buffer to be able to use string method on it
-    conn->read_buffer[conn->buf_size] = 0;
 
     struct packet packet = {.type = PACKET_INCOMPLETE};
 

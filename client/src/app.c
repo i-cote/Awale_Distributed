@@ -2,6 +2,7 @@
 #include "lobby_window.h"
 #include "message_window.h"
 #include "name_window.h"
+#include "player_list.h"
 #include "protocol.h"
 #include "ui.h"
 
@@ -48,7 +49,10 @@ void app_start(const char* addr, int port) {
 
     struct app_state state = {
         .state = CONNECTION,
+        .players_in_lobby = player_list_create(),
     };
+
+    player_list_remove(state.players_in_lobby, "bla");
     state.connection = connect_to_server(addr, port);
     state.state = WAITING_FOR_LOGIN;
     current_window = next_window;
@@ -70,6 +74,11 @@ void app_start(const char* addr, int port) {
 
     bool lost_connection = false;
     while (running) {
+        if (connection_need_write(state.connection)) {
+            fds[1].events |= POLLOUT;
+        } else {
+            fds[1].events &= ~POLLOUT;
+        }
         if (poll(fds, 2, -1) == -1) {
             if (errno == EINTR) {
                 continue;
@@ -85,13 +94,27 @@ void app_start(const char* addr, int port) {
         }
 
         if (fds[1].revents != 0) {
-            struct packet packet = receive(state.connection);
-            if (packet.type < 0) {
-                lost_connection = true;
-                break;
-            } 
+            if (fds[1].revents & POLLIN) {
 
-            app_on_new_packet(&state, &packet);
+                struct packet packet;
+                do {
+                    packet = receive(state.connection);
+                    if (packet.type < 0) {
+                        lost_connection = true;
+                        break;
+                    }
+
+                    if (packet.type != PACKET_INCOMPLETE)
+                        app_on_new_packet(&state, &packet);
+
+                } while (packet.type != PACKET_INCOMPLETE);
+            }
+            if (fds[1].revents & POLLOUT) {
+                if (connection_dispatch(state.connection) == SOCKET_ERROR) {
+                    lost_connection = true;
+                    break;
+                }
+            }
         }
 
         if (window_changed) {
@@ -111,6 +134,10 @@ void app_start(const char* addr, int port) {
         getch();
         message_window.close(&state);
     }
+
+    destroy_connection(state.connection);
+    player_list_free(state.players_in_lobby);
+
     ui_close();
 }
 
@@ -119,6 +146,19 @@ void app_on_new_packet(struct app_state* state, struct packet* packet) {
     case ACK:
         if (state->state == WAITING_FOR_SERVER_LOGIN_RES) {
             app_set_next_window(&lobby_window);
+        }
+        break;
+    case PLAYER_JOIN_LOBBY:
+        if (packet->payload != NULL) {
+            player_list_add(state->players_in_lobby, packet->payload);
+            // exit(42);
+            current_window->update(state, EV_LOBBY_UPDATE);
+        }
+        break;
+    case PLAYER_QUIT_LOBBY:
+        if (packet->payload != NULL) {
+            player_list_remove(state->players_in_lobby, packet->payload);
+            current_window->update(state, EV_LOBBY_UPDATE);
         }
         break;
     case ERROR:

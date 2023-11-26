@@ -86,6 +86,6 @@ void name_window_on_key_press(struct app_state* state, int key) {
     }
 }
 
-void name_window_update(struct app_state* state, enum event* event) {
+void name_window_update(struct app_state* state, enum event event) {
 
 }

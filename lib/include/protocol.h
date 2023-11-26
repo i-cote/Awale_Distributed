@@ -1,6 +1,7 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include "game_types.h"
 
@@ -28,9 +29,11 @@ enum packet_type {
 #define BUFFER_LEN 1024
 struct connection {
     int socketfd;
-    size_t buf_size;
+    size_t read_buf_size;
+    size_t write_buf_size;
     size_t last_packet_size;
     char read_buffer[BUFFER_LEN];
+    char write_buffer[BUFFER_LEN];
 };
 
 struct packet {
@@ -41,7 +44,11 @@ struct packet {
 struct connection* create_connection(int socketfd);
 void destroy_connection(struct connection* connection);
 
-int send_packet(struct connection* conn, enum packet_type type, const char* payload);
+bool connection_need_write(struct connection* conn);
+
+int connection_dispatch(struct connection* conn);
+
+bool send_packet(struct connection* conn, enum packet_type type, const char* payload_fmt, ...);
 
 int send_error(struct connection* conn, const char* err);
 

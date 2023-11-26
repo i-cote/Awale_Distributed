@@ -1,9 +1,10 @@
+#include "protocol.h"
 #include <errno.h>
+#include <netinet/in.h>
 #include <server.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/poll.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -20,6 +21,10 @@ int main(void) {
         for (int i = 0; i < server.player_count; i++) {
             fds[i].fd = server.players[i].connection->socketfd;
             fds[i].events = POLLIN;
+
+            if (connection_need_write(server.players[i].connection)) {
+                fds[i].events |= POLLOUT;
+            }
         }
 
         fds[server.player_count].fd = server.listening_socketfd;
@@ -44,7 +49,7 @@ int main(void) {
                 perror("accept()");
                 continue;
             }
-            
+
             printf("New connection\n");
             server_on_new_connection(&server, csock);
         }
@@ -58,11 +63,23 @@ int main(void) {
 
         for (int i = 0; i < server.player_count; i++) {
             if (fds[i].revents != 0) {
-                struct packet packet = receive(server.players[i].connection);
-                if (packet.type < 0) {
-                    server_disconnect_player(&server, i);
-                } else if (packet.type != UNKNOWN_TYPE && packet.type != PACKET_INCOMPLETE) {
-                    server_on_new_packet(&server, i, &packet);
+                if ((fds[i].revents & POLLIN) != 0) {
+                    // We have input
+                    struct packet packet;
+                    packet = receive(server.players[i].connection);
+                    if (packet.type < 0) {
+                        server_disconnect_player(&server, i);
+                        break;
+                    } else if (packet.type != UNKNOWN_TYPE &&
+                               packet.type != PACKET_INCOMPLETE) {
+                        server_on_new_packet(&server, i, &packet);
+                    }
+                }
+                if ((fds[i].revents & POLLOUT) != 0) {
+                    // We can write to the socket
+                    if (connection_dispatch(server.players[i].connection) == SOCKET_ERROR) {
+                        server_disconnect_player(&server, i);
+                    }
                 }
             }
         }

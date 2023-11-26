@@ -10,7 +10,7 @@
 struct ui_window {
     void (*open)(struct app_state*);
     void (*on_key_press)(struct app_state*, int);
-    void (*update)(struct app_state*, enum event*);
+    void (*update)(struct app_state*, enum event);
     void (*close)(struct app_state*);
 };
 

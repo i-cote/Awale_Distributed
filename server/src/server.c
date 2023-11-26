@@ -96,7 +96,7 @@ void server_on_new_packet(struct server* server, int index,
             }
         }
 
-        send_ack(source->connection);
+        send_packet(source->connection, ACK, "");
         strncpy(source->name, packet->payload, MAX_NAME_LEN);
         for (int i = 0; i < server->player_count; i++) {
             if (server->players[i].state == LOBBY)
