@@ -51,6 +51,7 @@ void app_start(const char* addr, int port) {
     struct app_state state = {
         .state = CONNECTION,
         .players_in_lobby = player_list_create(),
+        .players_in_game = player_list_create(),
     };
 
     player_list_remove(state.players_in_lobby, "bla");
@@ -177,7 +178,7 @@ void app_on_new_packet(struct app_state* state, struct packet* packet) {
     switch (packet->type) {
     case ACK:
         if (state->state == WAITING_FOR_SERVER_LOGIN_RES) {
-            state->state = CONNECTED;
+            state->state = LOBBY;
             app_set_next_window(&lobby_window);
         }
         break;
@@ -191,6 +192,19 @@ void app_on_new_packet(struct app_state* state, struct packet* packet) {
     case PLAYER_QUIT_LOBBY:
         if (packet->payload != NULL) {
             player_list_remove(state->players_in_lobby, packet->payload);
+            current_window->update(state, EV_LOBBY_UPDATE);
+        }
+        break;
+    case PLAYER_JOIN_GAME:
+        if (packet->payload != NULL) {
+            player_list_add(state->players_in_game, packet->payload);
+            // exit(42);
+            current_window->update(state, EV_LOBBY_UPDATE);
+        }
+        break;
+    case PLAYER_QUIT_GAME:
+        if (packet->payload != NULL) {
+            player_list_remove(state->players_in_game, packet->payload);
             current_window->update(state, EV_LOBBY_UPDATE);
         }
         break;
@@ -213,11 +227,35 @@ void app_on_new_packet(struct app_state* state, struct packet* packet) {
         app_set_next_window(&message_window);
         break;
     case PLAYER_ASSIGN:
-        state->current_player = atoi(packet->payload);
+        sscanf(packet->payload, "%d %" STR(MAX_NAME_LEN) "s",
+               &state->current_player, state->opponent);
         app_set_next_window(&board_window);
+
+        state->state = PLAY;
+        player_list_clear(state->players_in_lobby);
+        player_list_clear(state->players_in_game);
+        break;
+    case SPEC_ASSIGN:
+        sscanf(packet->payload,
+               "%d %" STR(MAX_NAME_LEN) "s %" STR(MAX_NAME_LEN) "s",
+               &state->current_player, state->spectated, state->opponent);
+        app_set_next_window(&board_window);
+
+        state->state = SPECTATOR;
+        player_list_clear(state->players_in_lobby);
+        player_list_clear(state->players_in_game);
         break;
     case BOARD_UPDATED:
         handle_board_update(state, packet);
+        break;
+    case GAME_END:
+        message_window_setup(true, &lobby_window, NULL, "End of the game: %s",
+                             packet->payload);
+        app_set_next_window(&message_window);
+
+        state->state = LOBBY;
+        player_list_clear(state->players_in_lobby);
+        player_list_clear(state->players_in_game);
         break;
     case ERROR:
         continuation = NULL;

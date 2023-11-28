@@ -6,6 +6,9 @@
 #include "game_types.h"
 
 #define MAX_PLAYERS 128
+#define MAX_NAME_LEN 16
+#define STR_EXPAND(tok) #tok
+#define STR(tok) STR_EXPAND(tok)
 
 #define SOCKET_ERROR -1
 #define SOCKET_SUCCESS 0
@@ -17,12 +20,17 @@ enum packet_type {
     MAKE_MOVE, // move <0..5>
     BOARD_UPDATED, // update <holes> <scores> <to_play>
     PLAYER_JOIN_LOBBY, // player_join <name>
+    PLAYER_JOIN_GAME, 
+    PLAYER_QUIT_GAME, 
     PLAYER_QUIT_LOBBY, // player_quit <name>
     CHALLENGE_PLAYER, // challenge <name>
     CHALLENGE_RECEIVE,
     CHALLENGE_ACCEPT, // challenge_accept
     CHALLENGE_REFUSE, // challenge_refuse 
     CHALLENGE_CANCEL, // challenge_cancel
+    SPEC,
+    SPEC_ASSIGN,
+    GAME_END,
     ACK,
     ERROR,
 };

@@ -69,11 +69,13 @@ void name_window_on_key_press(struct app_state* state, int key) {
     case '\n':
         form_driver(form, REQ_NEXT_FIELD);
         form_driver(form, REQ_PREV_FIELD);
+        
         state->state = WAITING_FOR_SERVER_LOGIN_RES;
         char* name = trim_whitespaces(field_buffer(fields[0], 0));
         message_window_setup(false, NULL, NULL, "Connection as %s...", name);
         app_set_next_window(&message_window);
         send_packet(state->connection, LOGIN, name);
+        strncpy(state->name, name, MAX_NAME_LEN);
         form_driver(form, REQ_CLR_FIELD);
         break;
     case KEY_BACKSPACE:

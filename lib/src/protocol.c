@@ -23,12 +23,17 @@ const char* LOOKUP_TABLE[] = {
     [BOARD_UPDATED] = "update",
     [PLAYER_JOIN_LOBBY] = "player_join",
     [PLAYER_QUIT_LOBBY] = "player_quit",
+    [PLAYER_JOIN_GAME] = "player_join_game",
+    [PLAYER_QUIT_GAME] = "player_quit_game",
     [CHALLENGE_PLAYER] = "challenge",
     [CHALLENGE_RECEIVE] = "challenge_receive",
     [CHALLENGE_ACCEPT] = "challenge_accept",
     [CHALLENGE_REFUSE] = "challenge_refuse",
     [CHALLENGE_CANCEL] = "challenge_cancel", // challenge_refuse <name>
+    [SPEC] = "spec",
+    [SPEC_ASSIGN] = "spec_assign",
     [ACK] = "ack",
+    [GAME_END] = "game_end",
     [ERROR] = "error",
 };
 
@@ -53,6 +58,9 @@ bool connection_need_write(struct connection* conn) {
 }
 
 int connection_dispatch(struct connection* conn) {
+    if (conn == NULL) {
+        return SOCKET_ERROR;
+    }
     int total_written = 0;
     int written = 0;
     while (total_written < conn->write_buf_size &&
@@ -79,11 +87,16 @@ int connection_dispatch(struct connection* conn) {
         return SOCKET_ERROR;
     }
 
-    else return SOCKET_SUCCESS;
+    else
+        return SOCKET_SUCCESS;
 }
 
 bool send_packet(struct connection* conn, enum packet_type type,
                  const char* payload_fmt, ...) {
+    if (conn == NULL) {
+        return false;
+    }
+
     char packet_buffer[PACKET_BUFFER_SIZE];
     int packet_size = 0;
     va_list arglist;
@@ -119,7 +132,6 @@ bool send_packet(struct connection* conn, enum packet_type type,
     // send(conn->socketfd, packet_buffer);
 }
 
-
 int send_update(struct connection* conn, const struct board* board) {
     char packet_buffer[PACKET_BUFFER_SIZE];
     size_t current_size = 0;
@@ -133,13 +145,15 @@ int send_update(struct connection* conn, const struct board* board) {
             sprintf(packet_buffer + current_size, "%d ", board->points[i]);
     }
 
-    current_size +=
-        sprintf(packet_buffer + current_size, "%d", board->to_play);
+    current_size += sprintf(packet_buffer + current_size, "%d", board->to_play);
 
     return send_packet(conn, BOARD_UPDATED, packet_buffer);
 }
 
 struct packet receive(struct connection* conn) {
+    if (conn == NULL) {
+        return (struct packet){.type = SOCKET_ERROR};
+    }
     // First we clear the last payload to make space in the buffer
     if (conn->last_packet_size > 0) {
         memmove(conn->read_buffer, conn->read_buffer + conn->last_packet_size,

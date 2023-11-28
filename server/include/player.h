@@ -4,13 +4,12 @@
 #include "game_types.h"
 #include <protocol.h>
 
-#define MAX_NAME_LEN 16
 
 enum player_state {
     WAITING_FOR_LOGIN,
     LOBBY,
     PLAY,
-    SPEC,
+    SPECTATOR,
     DISCONNECTED,
 };
 

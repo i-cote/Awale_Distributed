@@ -8,7 +8,9 @@ enum state {
     CONNECTION,
     WAITING_FOR_LOGIN,
     WAITING_FOR_SERVER_LOGIN_RES,
-    CONNECTED,
+    LOBBY,
+    PLAY,
+    SPECTATOR,
 };
 
 enum event {
@@ -21,7 +23,11 @@ struct app_state {
     enum player current_player;
     struct connection* connection;
     struct player_list* players_in_lobby;
+    struct player_list* players_in_game;
     enum state state;
+    char name[MAX_NAME_LEN];
+    char opponent[MAX_NAME_LEN];
+    char spectated[MAX_NAME_LEN];
 };
 
 struct ui_window;

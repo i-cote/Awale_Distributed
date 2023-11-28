@@ -44,12 +44,12 @@ static void draw_player_line(WINDOW* line, const char* name, short color,
 }
 
 static void draw_player_lines(struct app_state* state) {
-    draw_player_line(top_line, "Opponent",
+    draw_player_line(top_line, state->opponent,
                      state->board.to_play != state->current_player
                          ? PLAYING_COLOR
                          : DEFAULT_COLOR,
                      state->board.points[OPPONENT(state->current_player)]);
-    draw_player_line(bot_line, "You",
+    draw_player_line(bot_line, state->state == SPECTATOR ? state->spectated : state->name,
                      state->board.to_play == state->current_player
                          ? PLAYING_COLOR
                          : DEFAULT_COLOR,
@@ -78,7 +78,7 @@ static void draw_board(struct app_state* state) {
         for (int y = 0; y < 2; y++) {
             int pos = state->current_player == PLAYER1 ? grid_p1_to_pos(x, y)
                                                        : grid_to_p2_pos(x, y);
-            bool selected = (y == 1 && x == selected_hole);
+            bool selected = state->state != SPECTATOR && (y == 1 && x == selected_hole);
             draw_cell(middle_window, selected, state->board.holes[pos], x, y, 5,
                       5);
         }
@@ -131,7 +131,7 @@ void board_window_on_key_press(struct app_state* state, int key) {
         draw_board(state);
         break;
     case '\n':
-        if (state->current_player == state->board.to_play) {
+        if (state->state != SPECTATOR && state->current_player == state->board.to_play) {
             send_packet(state->connection, MAKE_MOVE, "%d", selected_hole);
         }
         break;
