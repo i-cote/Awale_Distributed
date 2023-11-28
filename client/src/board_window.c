@@ -25,14 +25,15 @@ static inline int grid_p1_to_pos(int x, int y) {
 }
 
 static inline int grid_to_p2_pos(int x, int y) {
-    if (y == 1) {
+    if (y == 0) {
         return 5 - x;
     } else {
         return 6 + x;
     }
 }
 
-static void draw_player_line(WINDOW* line, const char* name, short color, uint32_t score) { 
+static void draw_player_line(WINDOW* line, const char* name, short color,
+                             uint32_t score) {
     werase(line);
     wattron(line, COLOR_PAIR(color));
     box(line, ACS_VLINE, ACS_HLINE);
@@ -43,15 +44,20 @@ static void draw_player_line(WINDOW* line, const char* name, short color, uint32
 }
 
 static void draw_player_lines(struct app_state* state) {
-   draw_player_line(top_line, "Opponent",
-                     state->board.to_play != state->current_player ? PLAYING_COLOR : DEFAULT_COLOR,
+    draw_player_line(top_line, "Opponent",
+                     state->board.to_play != state->current_player
+                         ? PLAYING_COLOR
+                         : DEFAULT_COLOR,
                      state->board.points[OPPONENT(state->current_player)]);
     draw_player_line(bot_line, "You",
-                     state->board.to_play == state->current_player ? PLAYING_COLOR : DEFAULT_COLOR,
+                     state->board.to_play == state->current_player
+                         ? PLAYING_COLOR
+                         : DEFAULT_COLOR,
                      state->board.points[state->current_player]);
 }
 
-static void draw_cell(WINDOW *board, bool selected, int score, int x, int y, int offsetx, int offsety) {
+static void draw_cell(WINDOW* board, bool selected, int score, int x, int y,
+                      int offsetx, int offsety) {
     WINDOW* cell = subwin(board, 3, 7, y * 2 + offsety, x * 6 + offsetx);
     wborder(cell, '|', '|', '-', '-', '+', '+', '+', '+');
     if (selected) {
@@ -68,11 +74,13 @@ static void draw_cell(WINDOW *board, bool selected, int score, int x, int y, int
 static void draw_board(struct app_state* state) {
     werase(middle_window);
     box(middle_window, ACS_VLINE, ACS_HLINE);
-    for (int x = 0; x < 6 ; x++) {
+    for (int x = 0; x < 6; x++) {
         for (int y = 0; y < 2; y++) {
-            int pos = state->current_player == PLAYER1 ? grid_p1_to_pos(x, y) : grid_to_p2_pos(x, y);
-            bool selected = (y == 1 && x == selected_hole) ;
-            draw_cell(middle_window, selected, state->board.holes[pos], x, y, 5, 5);
+            int pos = state->current_player == PLAYER1 ? grid_p1_to_pos(x, y)
+                                                       : grid_to_p2_pos(x, y);
+            bool selected = (y == 1 && x == selected_hole);
+            draw_cell(middle_window, selected, state->board.holes[pos], x, y, 5,
+                      5);
         }
     }
     wnoutrefresh(middle_window);
@@ -92,15 +100,13 @@ void board_window_open(struct app_state* state) {
     draw_all(state);
 }
 
-void board_window_close(struct app_state* state) {
-
-}
+void board_window_close(struct app_state* state) {}
 
 void board_window_on_key_press(struct app_state* state, int key) {
-    switch(key) {
+    switch (key) {
     case KEY_RESIZE:
         clear();
-        
+
         top_line = subwin(stdscr, 3, COLS, 0, 0);
         bot_line = subwin(stdscr, 3, COLS, LINES - 3, 0);
         middle_window = subwin(stdscr, LINES - 6, COLS, 3, 0);
@@ -108,7 +114,7 @@ void board_window_on_key_press(struct app_state* state, int key) {
         draw_all(state);
         break;
     case 'q':
-        app_close();
+        // app_close();
         break;
     case 'l':
         selected_hole++;
@@ -124,12 +130,16 @@ void board_window_on_key_press(struct app_state* state, int key) {
         }
         draw_board(state);
         break;
+    case '\n':
+        if (state->current_player == state->board.to_play) {
+            send_packet(state->connection, MAKE_MOVE, "%d", selected_hole);
+        }
+        break;
     }
-
 }
-
 
 void board_window_update(struct app_state* state, enum event event) {
-
+    if (event == EV_BOARD_UPDATE) {
+        draw_all(state);
+    }
 }
-

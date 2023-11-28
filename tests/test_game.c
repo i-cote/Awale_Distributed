@@ -1,5 +1,5 @@
 #include "include/test_game.h"
-#include "../src/game_types.h"
+#include "game_types.h"
 
 #include <string.h>
 #include <stdio.h>

@@ -20,8 +20,9 @@ enum packet_type {
     PLAYER_QUIT_LOBBY, // player_quit <name>
     CHALLENGE_PLAYER, // challenge <name>
     CHALLENGE_RECEIVE,
-    CHALLENGE_ACCEPT, // challenge_refuse <name>
-    CHALLENGE_REFUSE, // challenge_refuse <name>
+    CHALLENGE_ACCEPT, // challenge_accept
+    CHALLENGE_REFUSE, // challenge_refuse 
+    CHALLENGE_CANCEL, // challenge_cancel
     ACK,
     ERROR,
 };
@@ -50,17 +51,7 @@ int connection_dispatch(struct connection* conn);
 
 bool send_packet(struct connection* conn, enum packet_type type, const char* payload_fmt, ...);
 
-int send_error(struct connection* conn, const char* err);
-
-int send_ack(struct connection* conn);
-
-int send_login(struct connection* conn, const char* name);
-
-int send_move(struct connection*, int hole);
-
 int send_update(struct connection* conn, const struct board* board);
-
-int send_player_assigned(struct connection* conn, enum player player);
 
 struct packet receive(struct connection* conn);
 

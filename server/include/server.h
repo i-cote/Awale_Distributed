@@ -9,7 +9,7 @@
 struct server {
     int listening_socketfd;
     size_t player_count;
-    struct connected_player players[MAX_PLAYERS];
+    struct connected_player* players[MAX_PLAYERS];
 };
 
 // Init a zero initialized server structure given to listen on the given port
@@ -22,8 +22,11 @@ void server_clean_disconnected_players(struct server* server);
 
 void server_disconnect_player(struct server* server, int index);
 
-void server_on_new_packet(struct server* server, int index, const struct packet* packet);
+void server_on_new_packet(struct server* server,
+                          struct connected_player* source,
+                          const struct packet* packet);
 
-void server_send_packet_to_lobby(struct server* server, enum packet_type type, const char* payload);
+void server_send_packet_to_lobby(struct server* server, enum packet_type type,
+                                 const char* payload);
 
 #endif

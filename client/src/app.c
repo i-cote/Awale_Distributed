@@ -1,4 +1,5 @@
 #include "app.h"
+#include "board_window.h"
 #include "lobby_window.h"
 #include "message_window.h"
 #include "name_window.h"
@@ -99,6 +100,7 @@ void app_start(const char* addr, int port) {
                 struct packet packet;
                 do {
                     packet = receive(state.connection);
+
                     if (packet.type < 0) {
                         lost_connection = true;
                         break;
@@ -108,6 +110,10 @@ void app_start(const char* addr, int port) {
                         app_on_new_packet(&state, &packet);
 
                 } while (packet.type != PACKET_INCOMPLETE);
+                if (packet.type < 0) {
+                    lost_connection = true;
+                    break;
+                }
             }
             if (fds[1].revents & POLLOUT) {
                 if (connection_dispatch(state.connection) == SOCKET_ERROR) {
@@ -128,8 +134,7 @@ void app_start(const char* addr, int port) {
     }
     current_window->close(&state);
     if (lost_connection) {
-        message_window_set_message("Lost connection");
-        message_window_can_interact(true);
+        message_window_setup(true, NULL, NULL, "Lost connection");
         message_window.open(&state);
         getch();
         message_window.close(&state);
@@ -141,10 +146,38 @@ void app_start(const char* addr, int port) {
     ui_close();
 }
 
+static void challenge_response(struct app_state* state, int key,
+                               struct ui_window** continuation) {
+    switch (key) {
+    case 'y':
+        send_packet(state->connection, CHALLENGE_ACCEPT, "");
+        message_window_setup(false, NULL, NULL, "Loading game...");
+        *continuation = &message_window;
+        break;
+    default:
+        send_packet(state->connection, CHALLENGE_REFUSE, "");
+        *continuation = &lobby_window;
+        break;
+    }
+}
+static void handle_board_update(struct app_state* state,
+                                struct packet* packet) {
+    sscanf(
+        packet->payload, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+        &state->board.holes[0], &state->board.holes[1], &state->board.holes[2],
+        &state->board.holes[3], &state->board.holes[4], &state->board.holes[5],
+        &state->board.holes[6], &state->board.holes[7], &state->board.holes[8],
+        &state->board.holes[9], &state->board.holes[10],
+        &state->board.holes[11], &state->board.points[0],
+        &state->board.points[1], &state->board.to_play);
+    current_window->update(state, EV_BOARD_UPDATE);
+}
 void app_on_new_packet(struct app_state* state, struct packet* packet) {
+    struct ui_window* continuation;
     switch (packet->type) {
     case ACK:
         if (state->state == WAITING_FOR_SERVER_LOGIN_RES) {
+            state->state = CONNECTED;
             app_set_next_window(&lobby_window);
         }
         break;
@@ -161,21 +194,44 @@ void app_on_new_packet(struct app_state* state, struct packet* packet) {
             current_window->update(state, EV_LOBBY_UPDATE);
         }
         break;
-    case ERROR:
-        message_window_can_interact(true);
 
+    case CHALLENGE_RECEIVE:
+        message_window_setup(
+            true, NULL, challenge_response,
+            "%s vous defie !\n\n Press y to accept\n Press any "
+            "other key to refuse",
+            packet->payload);
+        app_set_next_window(&message_window);
+        break;
+    case CHALLENGE_REFUSE:
+        message_window_setup(true, &lobby_window, NULL, "Defie refuse: %s",
+                             packet->payload);
+        app_set_next_window(&message_window);
+        break;
+    case CHALLENGE_CANCEL:
+        message_window_setup(true, &lobby_window, NULL, "Defie annule");
+        app_set_next_window(&message_window);
+        break;
+    case PLAYER_ASSIGN:
+        state->current_player = atoi(packet->payload);
+        app_set_next_window(&board_window);
+        break;
+    case BOARD_UPDATED:
+        handle_board_update(state, packet);
+        break;
+    case ERROR:
+        continuation = NULL;
         switch (state->state) {
         case WAITING_FOR_SERVER_LOGIN_RES:
             state->state = WAITING_FOR_LOGIN;
-            message_window_set_continuation(&name_window);
+            continuation = &name_window;
             break;
         default:
-            message_window_set_continuation(NULL);
             break;
         }
-        message_window_set_message("Error from server: %s",
-                                   packet->payload != NULL ? packet->payload
-                                                           : "Unkown error");
+        message_window_setup(true, continuation, NULL, "Error from server: %s",
+                             packet->payload != NULL ? packet->payload
+                                                     : "Unkown error");
         app_set_next_window(&message_window);
     }
 }

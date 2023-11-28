@@ -19,10 +19,10 @@ int main(void) {
     while (1) {
         server_clean_disconnected_players(&server);
         for (int i = 0; i < server.player_count; i++) {
-            fds[i].fd = server.players[i].connection->socketfd;
+            fds[i].fd = server.players[i]->connection->socketfd;
             fds[i].events = POLLIN;
 
-            if (connection_need_write(server.players[i].connection)) {
+            if (connection_need_write(server.players[i]->connection)) {
                 fds[i].events |= POLLOUT;
             }
         }
@@ -66,22 +66,28 @@ int main(void) {
                 if ((fds[i].revents & POLLIN) != 0) {
                     // We have input
                     struct packet packet;
-                    packet = receive(server.players[i].connection);
+                    packet = receive(server.players[i]->connection);
                     if (packet.type < 0) {
                         server_disconnect_player(&server, i);
                         break;
-                    } else if (packet.type != UNKNOWN_TYPE &&
-                               packet.type != PACKET_INCOMPLETE) {
-                        server_on_new_packet(&server, i, &packet);
+                    } else if (packet.type != PACKET_INCOMPLETE) {
+                        server_on_new_packet(&server, server.players[i], &packet);
                     }
                 }
                 if ((fds[i].revents & POLLOUT) != 0) {
                     // We can write to the socket
-                    if (connection_dispatch(server.players[i].connection) == SOCKET_ERROR) {
+                    if (connection_dispatch(server.players[i]->connection) == SOCKET_ERROR) {
                         server_disconnect_player(&server, i);
                     }
                 }
             }
+        }
+    }
+
+    for (int i = 0; i < server.player_count; i++) {
+        if (server.players[i]->connection != NULL) {
+            printf("closing %s\n", server.players[i]->name);
+            destroy_connection(server.players[i]->connection);
         }
     }
 

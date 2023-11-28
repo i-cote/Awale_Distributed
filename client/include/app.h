@@ -8,6 +8,7 @@ enum state {
     CONNECTION,
     WAITING_FOR_LOGIN,
     WAITING_FOR_SERVER_LOGIN_RES,
+    CONNECTED,
 };
 
 enum event {

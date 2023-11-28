@@ -2,7 +2,9 @@
 #include "lobby_window.h"
 
 #include "app.h"
+#include "message_window.h"
 #include "player_list.h"
+#include "protocol.h"
 #include <curses.h>
 #include <menu.h>
 #include <ncurses.h>
@@ -48,6 +50,18 @@ void lobby_window_close(struct app_state* state) {
     destroy_menu();
 }
 
+static void challenge_cancel(struct app_state* state, int key,
+                             struct ui_window** continuation) {
+    send_packet(state->connection, CHALLENGE_CANCEL, "");
+}
+
+static void challenge_player(struct app_state* state) {
+    const char* player = item_name(current_item(menu));
+    send_packet(state->connection, CHALLENGE_PLAYER, player);
+    message_window_setup(true, &lobby_window, challenge_cancel, "En attente de reponse...");
+    app_set_next_window(&message_window);
+}
+
 void lobby_window_on_key_press(struct app_state* state, int key) {
     switch (key) {
     case KEY_UP:
@@ -55,6 +69,9 @@ void lobby_window_on_key_press(struct app_state* state, int key) {
         break;
     case KEY_DOWN:
         menu_driver(menu, REQ_DOWN_ITEM);
+        break;
+    case '\n':
+        challenge_player(state);
         break;
     default:
         menu_driver(menu, key);
