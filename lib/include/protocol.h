@@ -28,11 +28,13 @@ enum packet_type {
     CHALLENGE_ACCEPT, // challenge_accept
     CHALLENGE_REFUSE, // challenge_refuse 
     CHALLENGE_CANCEL, // challenge_cancel
+    FORFEIT,
     SPEC,
     SPEC_ASSIGN,
     GAME_END,
     ACK,
     ERROR,
+    SERVER_MESSAGE,
 };
 
 #define BUFFER_LEN 1024

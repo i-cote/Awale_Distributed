@@ -34,6 +34,8 @@ const char* LOOKUP_TABLE[] = {
     [SPEC_ASSIGN] = "spec_assign",
     [ACK] = "ack",
     [GAME_END] = "game_end",
+    [FORFEIT] = "forfeit",
+    [SERVER_MESSAGE] = "server_message",
     [ERROR] = "error",
 };
 

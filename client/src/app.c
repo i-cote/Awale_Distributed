@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 static struct ui_window* current_window;
+static struct ui_window* last_non_message_window;
 static struct ui_window* next_window;
 static bool window_changed;
 static bool running;
@@ -63,6 +64,7 @@ void app_start(const char* addr, int port) {
 
     next_window = &name_window;
     current_window = next_window;
+    last_non_message_window = next_window;
     current_window->open(&state);
 
     running = 1;
@@ -127,6 +129,9 @@ void app_start(const char* addr, int port) {
         if (window_changed) {
             current_window->close(&state);
             current_window = next_window;
+            if (current_window != &message_window) {
+                last_non_message_window = current_window;
+            }
             current_window->open(&state);
             window_changed = false;
         }
@@ -256,6 +261,10 @@ void app_on_new_packet(struct app_state* state, struct packet* packet) {
         state->state = LOBBY;
         player_list_clear(state->players_in_lobby);
         player_list_clear(state->players_in_game);
+        break;
+    case SERVER_MESSAGE:
+        message_window_setup(true, last_non_message_window, NULL, packet->payload);
+        app_set_next_window(&message_window);
         break;
     case ERROR:
         continuation = NULL;

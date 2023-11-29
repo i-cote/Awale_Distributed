@@ -15,30 +15,36 @@ int main(void) {
 
     struct pollfd fds[MAX_PLAYERS + 2]; // 1 for each connections + 1 for stdin
                                         // + 1 for listening
+    struct connected_player* polled_players[MAX_PLAYERS];
 
     while (1) {
         server_clean_disconnected_players(&server);
+        size_t player_count = 0;
         for (int i = 0; i < server.player_count; i++) {
-            fds[i].fd = server.players[i]->connection->socketfd;
-            fds[i].events = POLLIN;
+            if (server.players[i]->connection != NULL) {
+                size_t index = player_count++;
+                fds[index].fd = server.players[i]->connection->socketfd;
+                fds[index].events = POLLIN;
+                polled_players[index] = server.players[i];
 
-            if (connection_need_write(server.players[i]->connection)) {
-                fds[i].events |= POLLOUT;
+                if (connection_need_write(server.players[i]->connection)) {
+                    fds[index].events |= POLLOUT;
+                }
             }
         }
 
-        fds[server.player_count].fd = server.listening_socketfd;
-        fds[server.player_count].events = POLLIN;
+        fds[player_count].fd = server.listening_socketfd;
+        fds[player_count].events = POLLIN;
 
-        fds[server.player_count + 1].fd = STDIN_FILENO;
-        fds[server.player_count + 1].events = POLLIN;
+        fds[player_count + 1].fd = STDIN_FILENO;
+        fds[player_count + 1].events = POLLIN;
 
-        if (poll(fds, server.player_count + 2, -1) == -1) {
+        if (poll(fds, player_count + 2, -1) == -1) {
             perror("epoll error");
             return errno;
         }
 
-        if (fds[server.player_count].revents != 0) {
+        if (fds[player_count].revents != 0) {
             // New connection
 
             struct sockaddr_in csin = {0};
@@ -54,30 +60,30 @@ int main(void) {
             server_on_new_connection(&server, csock);
         }
 
-        if (fds[server.player_count + 1].revents != 0) {
+        if (fds[player_count + 1].revents != 0) {
             char c;
             while ((c = getchar() != '\n' && c != EOF))
                 ;
             break;
         }
 
-        for (int i = 0; i < server.player_count; i++) {
+        for (int i = 0; i < player_count; i++) {
             if (fds[i].revents != 0) {
                 if ((fds[i].revents & POLLIN) != 0) {
                     // We have input
                     struct packet packet;
-                    packet = receive(server.players[i]->connection);
+                    packet = receive(polled_players[i]->connection);
                     if (packet.type < 0) {
-                        server_disconnect_player(&server, i);
+                        server_disconnect_player(&server, polled_players[i]);
                         break;
                     } else if (packet.type != PACKET_INCOMPLETE) {
-                        server_on_new_packet(&server, server.players[i], &packet);
+                        server_on_new_packet(&server, polled_players[i], &packet);
                     }
                 }
                 if ((fds[i].revents & POLLOUT) != 0) {
                     // We can write to the socket
-                    if (connection_dispatch(server.players[i]->connection) == SOCKET_ERROR) {
-                        server_disconnect_player(&server, i);
+                    if (connection_dispatch(polled_players[i]->connection) == SOCKET_ERROR) {
+                        server_disconnect_player(&server, polled_players[i]);
                     }
                 }
             }

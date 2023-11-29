@@ -1,5 +1,7 @@
 #include "board_window.h"
 #include "app.h"
+#include "message_window.h"
+#include "protocol.h"
 #include <curses.h>
 #include <ncurses.h>
 #include <stdio.h>
@@ -49,11 +51,11 @@ static void draw_player_lines(struct app_state* state) {
                          ? PLAYING_COLOR
                          : DEFAULT_COLOR,
                      state->board.points[OPPONENT(state->current_player)]);
-    draw_player_line(bot_line, state->state == SPECTATOR ? state->spectated : state->name,
-                     state->board.to_play == state->current_player
-                         ? PLAYING_COLOR
-                         : DEFAULT_COLOR,
-                     state->board.points[state->current_player]);
+    draw_player_line(
+        bot_line, state->state == SPECTATOR ? state->spectated : state->name,
+        state->board.to_play == state->current_player ? PLAYING_COLOR
+                                                      : DEFAULT_COLOR,
+        state->board.points[state->current_player]);
 }
 
 static void draw_cell(WINDOW* board, bool selected, int score, int x, int y,
@@ -78,7 +80,8 @@ static void draw_board(struct app_state* state) {
         for (int y = 0; y < 2; y++) {
             int pos = state->current_player == PLAYER1 ? grid_p1_to_pos(x, y)
                                                        : grid_to_p2_pos(x, y);
-            bool selected = state->state != SPECTATOR && (y == 1 && x == selected_hole);
+            bool selected =
+                state->state != SPECTATOR && (y == 1 && x == selected_hole);
             draw_cell(middle_window, selected, state->board.holes[pos], x, y, 5,
                       5);
         }
@@ -102,6 +105,13 @@ void board_window_open(struct app_state* state) {
 
 void board_window_close(struct app_state* state) {}
 
+static void confirm_forfeit(struct app_state* state, int key,
+                            struct ui_window** continuation) {
+    if (key == 'y') {
+        send_packet(state->connection, FORFEIT, "");
+    }
+}
+
 void board_window_on_key_press(struct app_state* state, int key) {
     switch (key) {
     case KEY_RESIZE:
@@ -113,10 +123,15 @@ void board_window_on_key_press(struct app_state* state, int key) {
 
         draw_all(state);
         break;
-    case 'q':
-        // app_close();
+    case 'f':
+        message_window_setup(
+            true, &board_window, confirm_forfeit,
+            "Are you sure to forfeit ?\n\n Press y to confirm\n Press any "
+            "other key to cancel");
+        app_set_next_window(&message_window);
         break;
     case 'l':
+    case KEY_RIGHT:
         selected_hole++;
         if (selected_hole > 5) {
             selected_hole = 0;
@@ -124,6 +139,7 @@ void board_window_on_key_press(struct app_state* state, int key) {
         draw_board(state);
         break;
     case 'h':
+    case KEY_LEFT:
         selected_hole--;
         if (selected_hole < 0) {
             selected_hole = 5;
@@ -131,7 +147,8 @@ void board_window_on_key_press(struct app_state* state, int key) {
         draw_board(state);
         break;
     case '\n':
-        if (state->state != SPECTATOR && state->current_player == state->board.to_play) {
+        if (state->state != SPECTATOR &&
+            state->current_player == state->board.to_play) {
             send_packet(state->connection, MAKE_MOVE, "%d", selected_hole);
         }
         break;

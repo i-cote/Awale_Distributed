@@ -59,7 +59,8 @@ static void player_join_lobby(struct server* server,
         if (server->players[i]->state == LOBBY)
             send_packet(player->connection, PLAYER_JOIN_LOBBY,
                         server->players[i]->name);
-        if (server->players[i]->game != NULL && server->players[i]->state == PLAY)
+        if (server->players[i]->game != NULL &&
+            server->players[i]->state == PLAY)
             send_packet(player->connection, PLAYER_JOIN_GAME,
                         server->players[i]->name);
     }
@@ -69,48 +70,6 @@ static void player_join_lobby(struct server* server,
 
 static void clean_player(struct server* server,
                          struct connected_player* disconnected_player) {
-    for (int i = 0; i < server->player_count; i++) {
-        struct connected_player* player = server->players[i];
-        if (player->challenged_player == disconnected_player) {
-            player->challenged_player = NULL;
-            send_packet(player->connection, CHALLENGE_REFUSE,
-                        "Le joueur s'est déconnecté.");
-        }
-    }
-
-    if (disconnected_player->state == PLAY && disconnected_player->game != NULL) {
-        server_send_packet_to_lobby(server, PLAYER_QUIT_GAME,
-                                    disconnected_player->name);
-        struct game* game = disconnected_player->game;
-        struct connected_player* other = NULL;
-        for (int i = 0; i < 2; i++) {
-            if (game->players[i] != disconnected_player) {
-                other = game->players[i];
-            }
-        }
-
-        send_packet(other->connection, GAME_END, "You win by forfait");
-        other->game = NULL;
-        player_join_lobby(server, other);
-        for (int i = 0; i < game->spectator_count; i++) {
-            send_packet(game->spectator[i]->connection,
-                        GAME_END, "%s wins by forfait", other->name);
-            game->spectator[i]->game = NULL;
-            player_join_lobby(server, game->spectator[i]);
-        }
-
-        server_send_packet_to_lobby(server, PLAYER_QUIT_GAME, other->name);
-
-        free(game);
-    } else if (disconnected_player->state == SPECTATOR && disconnected_player->game != NULL) {
-        struct game* game = disconnected_player->game;
-        for (int i = 0; i < game->spectator_count; i++) {
-            if (game->spectator[i] == disconnected_player) {
-                game->spectator[i] = game->spectator[game->spectator_count - 1];
-                game->spectator_count--;
-            }
-        }
-    }
 
     free(disconnected_player);
 }
@@ -120,20 +79,20 @@ void server_clean_disconnected_players(struct server* server) {
 
     size_t removed_player_count = 0;
     while (server->player_count > 0 &&
-           server->players[server->player_count - 1]->connection == NULL) {
+           server->players[server->player_count - 1]->state == DESTROYED) {
         removed_player[removed_player_count++] =
             server->players[server->player_count - 1];
         server->player_count--;
     }
 
     for (int i = 0; i < server->player_count; i++) {
-        if (server->players[i]->connection == NULL) {
+        if (server->players[i]->state == DESTROYED) {
             removed_player[removed_player_count++] = server->players[i];
             server->players[i] = server->players[server->player_count - 1];
             server->player_count--;
             while (server->player_count > 0 &&
-                   server->players[server->player_count - 1]->connection ==
-                       NULL) {
+                   server->players[server->player_count - 1]->state ==
+                       DESTROYED) {
                 removed_player[removed_player_count++] =
                     server->players[server->player_count - 1];
                 server->player_count--;
@@ -145,15 +104,65 @@ void server_clean_disconnected_players(struct server* server) {
         clean_player(server, removed_player[i]);
     }
 }
-void server_disconnect_player(struct server* server, int index) {
-    destroy_connection(server->players[index]->connection);
-    enum player_state last_state = server->players[index]->state;
-    server->players[index]->connection = NULL;
+void server_disconnect_player(struct server* server,
+                              struct connected_player* disconnected_player) {
+    destroy_connection(disconnected_player->connection);
+    enum player_state last_state = disconnected_player->state;
+    disconnected_player->connection = NULL;
+    disconnected_player->state = DISCONNECTED;
+
+    for (int i = 0; i < server->player_count; i++) {
+        struct connected_player* player = server->players[i];
+        if (player->challenged_player == disconnected_player) {
+            player->challenged_player = NULL;
+            send_packet(player->connection, CHALLENGE_REFUSE,
+                        "Le joueur s'est déconnecté.");
+        }
+    }
+
+    if (last_state == PLAY && disconnected_player->game != NULL) {
+        server_send_packet_to_lobby(server, PLAYER_QUIT_GAME,
+                                    disconnected_player->name);
+
+        struct game* game = disconnected_player->game;
+        struct connected_player* other = NULL;
+        for (int i = 0; i < 2; i++) {
+            if (game->players[i] != disconnected_player) {
+                other = game->players[i];
+            }
+        }
+
+        if (other->state != DISCONNECTED) {
+            send_packet(other->connection, SERVER_MESSAGE,
+                        "Your opponent disconnected.");
+            server->paused_game[server->paused_game_count++] = game;
+        }
+        // send_packet(other->connection, GAME_END, "You win by forfait");
+        // other->game = NULL;
+        // player_join_lobby(server, other);
+        // for (int i = 0; i < game->spectator_count; i++) {
+        //     send_packet(game->spectator[i]->connection, GAME_END,
+        //                 "%s wins by forfait", other->name);
+        //     game->spectator[i]->game = NULL;
+        //     player_join_lobby(server, game->spectator[i]);
+        // }
+    } else if (last_state == SPECTATOR && disconnected_player->game != NULL) {
+        struct game* game = disconnected_player->game;
+        for (int i = 0; i < game->spectator_count; i++) {
+            if (game->spectator[i] == disconnected_player) {
+                game->spectator[i] = game->spectator[game->spectator_count - 1];
+                game->spectator_count--;
+            }
+        }
+    }
     printf("disconnected\n");
 
     if (last_state == LOBBY)
         server_send_packet_to_lobby(server, PLAYER_QUIT_LOBBY,
-                                    server->players[index]->name);
+                                    disconnected_player->name);
+    // else if (last_state == PLAY)
+    //     server_send_packet_to_lobby(server, PLAYER_QUIT_GAME,
+    //                                 disconnected_player->name);
 }
 
 static void handle_login_packet(struct server* server,
@@ -165,30 +174,73 @@ static void handle_login_packet(struct server* server,
         return;
     }
 
-	char name[MAX_NAME_LEN];
-	char password[MAX_NAME_LEN];
+    char name[MAX_NAME_LEN + 1];
+    char password[MAX_NAME_LEN + 1];
 
-	name = sscanf(packet->payload,"%"STR(MAX_NAME_LEN)"s %"STR(MAX_NAME_LEN)"s",name, password);
+    sscanf(packet->payload, "%" STR(MAX_NAME_LEN) "s %" STR(MAX_NAME_LEN) "s",
+           name, password);
 
+    struct connected_player* player = NULL;
     for (int i = 0; i < server->player_count; i++) {
         if (strcmp(server->players[i]->name, name) == 0) {
-			if(server->players[i]->state != DISCONNECTED) {
-				send_packet(source->connection, ERROR, "Player already connected");
-				return;
-			}
+            if (server->players[i]->state != DISCONNECTED) {
+                send_packet(source->connection, ERROR,
+                            "Player already connected");
+                return;
+            }
 
-			if(strcmp(server->players[i]->password, password) != 0)  {
-				send_packet(source->connection, ERROR, "Wrong Password");
-				return;
-			}
+            if (strcmp(server->players[i]->password, password) != 0) {
+                send_packet(source->connection, ERROR, "Wrong Password");
+                return;
+            }
 
+            player = server->players[i];
         }
     }
 
-    send_packet(source->connection, ACK, "");
-    strcpy(source->name, name);
-    strcpy(source->password, password);
-    player_join_lobby(server, source);
+    struct game* game = NULL;
+    size_t game_index = 0;
+    enum player p = PLAYER1;
+    if (player != NULL) {
+        player->connection = source->connection;
+
+        source->connection = NULL;
+        source->state = DESTROYED;
+
+        for (int i = 0; i < server->paused_game_count; i++) {
+            for (int j = 0; j < 2; j++) {
+                if (server->paused_game[i]->players[j] == player) {
+                    game_index = i;
+                    game = server->paused_game[i];
+                    p = j;
+                }
+            }
+        }
+    } else {
+        player = source;
+        strcpy(player->name, name);
+        strcpy(player->password, password);
+    }
+
+    if (game == NULL) {
+        send_packet(player->connection, ACK, "");
+        player_join_lobby(server, player);
+    } else {
+        if (game->players[OPPONENT(p)]->state != DISCONNECTED) {
+            // We resume the party
+            server->paused_game[game_index] =
+                server->paused_game[server->paused_game_count - 1];
+            server->paused_game_count--;
+            send_packet(game->players[OPPONENT(p)]->connection, SERVER_MESSAGE,
+                        "Your opponent reconnected.");
+        }
+
+        server_send_packet_to_lobby(server, PLAYER_JOIN_GAME, player->name);
+        send_packet(player->connection, PLAYER_ASSIGN, "%d %s", p,
+                    game->players[OPPONENT(p)]->name);
+        send_update(player->connection, &game->board);
+        player->state = PLAY;
+    }
 }
 
 static void handle_challenge_packet(struct server* server,
@@ -361,7 +413,8 @@ static void handle_move_packet(struct server* server,
 
                     for (int i = 0; i < source->game->spectator_count; i++) {
                         send_packet(source->game->spectator[i]->connection,
-                                    GAME_END, "%s wins", source->game->players[winner]->name);
+                                    GAME_END, "%s wins",
+                                    source->game->players[winner]->name);
                         source->game->spectator[i]->game = NULL;
                         player_join_lobby(server, source->game->spectator[i]);
                     }
@@ -377,6 +430,42 @@ static void handle_move_packet(struct server* server,
             }
         }
     }
+}
+
+static void handle_forfeit_packet(struct server* server,
+                                  struct connected_player* source,
+                                  const struct packet* packet) {
+
+    if (source->game == NULL) {
+        return;
+    }
+    struct game* game = source->game;
+
+    enum player winner = PLAYER1;
+    for (int i = 0; i < 2; i++) {
+        if (game->players[i] != source) {
+            winner = i;
+        }
+    }
+    send_packet(game->players[winner]->connection, GAME_END,
+                "You win by forfeit");
+    send_packet(game->players[OPPONENT(winner)]->connection, GAME_END,
+                "You lose by forfeit");
+
+    for (int i = 0; i < game->spectator_count; i++) {
+        send_packet(game->spectator[i]->connection, GAME_END,
+                    "%s wins by forfeit", game->players[winner]->name);
+        game->spectator[i]->game = NULL;
+        player_join_lobby(server, game->spectator[i]);
+    }
+
+    for (int i = 0; i < 2; i++) {
+        game->players[i]->game = NULL;
+        server_send_packet_to_lobby(server, PLAYER_QUIT_GAME,
+                                    game->players[i]->name);
+        player_join_lobby(server, game->players[i]);
+    }
+    free(game);
 }
 
 static void handle_spec_packet(struct server* server,
@@ -444,6 +533,9 @@ void server_on_new_packet(struct server* server,
         break;
     case SPEC:
         handle_spec_packet(server, source, packet);
+        break;
+    case FORFEIT:
+        handle_forfeit_packet(server, source, packet);
         break;
     default:
         send_packet(source->connection, ERROR, "Bad packet");

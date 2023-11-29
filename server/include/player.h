@@ -11,6 +11,7 @@ enum player_state {
     PLAY,
     SPECTATOR,
     DISCONNECTED,
+    DESTROYED,
 };
 
 struct game {
@@ -25,7 +26,8 @@ struct connected_player {
     enum player_state state;
     struct connected_player* challenged_player;
     struct game* game;
-    char name[MAX_NAME_LEN];
+    char name[MAX_NAME_LEN + 1];
+    char password[MAX_NAME_LEN + 1];
 };
 
 #endif
