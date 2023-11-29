@@ -2,7 +2,7 @@ BUILD_DIR=build
 LIB_DIR=$(BUILD_DIR)/lib
 OBJ_DIR=$(BUILD_DIR)/obj
 BIN_DIR=$(BUILD_DIR)/bin
-CC := clang
+CC := gcc
 CC_FLAGS := -g -Wall -std=c11
 LD_FLAGS :=
 
