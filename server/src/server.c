@@ -165,16 +165,29 @@ static void handle_login_packet(struct server* server,
         return;
     }
 
+	char name[MAX_NAME_LEN];
+	char password[MAX_NAME_LEN];
+
+	name = sscanf(packet->payload,"%"STR(MAX_NAME_LEN)"s %"STR(MAX_NAME_LEN)"s",name, password);
+
     for (int i = 0; i < server->player_count; i++) {
-        if (strncmp(server->players[i]->name, packet->payload, MAX_NAME_LEN) ==
-            0) {
-            send_packet(source->connection, ERROR, "Name already used");
-            return;
+        if (strcmp(server->players[i]->name, name) == 0) {
+			if(server->players[i]->state != DISCONNECTED) {
+				send_packet(source->connection, ERROR, "Player already connected");
+				return;
+			}
+
+			if(strcmp(server->players[i]->password, password) != 0)  {
+				send_packet(source->connection, ERROR, "Wrong Password");
+				return;
+			}
+
         }
     }
 
     send_packet(source->connection, ACK, "");
-    strncpy(source->name, packet->payload, MAX_NAME_LEN);
+    strcpy(source->name, name);
+    strcpy(source->password, password);
     player_join_lobby(server, source);
 }
 
