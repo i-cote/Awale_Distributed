@@ -173,7 +173,6 @@ static void handle_login_packet(struct server* server,
         }
     }
 
-    printf("test\n");
     send_packet(source->connection, ACK, "");
     strncpy(source->name, packet->payload, MAX_NAME_LEN);
     player_join_lobby(server, source);
