@@ -124,6 +124,8 @@ void board_window_on_key_press(struct app_state* state, int key) {
         draw_all(state);
         break;
     case 'f':
+		if(state->state == SPECTATOR)
+			break;
         message_window_setup(
             true, &board_window, confirm_forfeit,
             "Are you sure to forfeit ?\n\n Press y to confirm\n Press any "
