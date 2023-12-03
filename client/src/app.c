@@ -175,7 +175,7 @@ static void handle_board_update(struct app_state* state,
         &state->board.holes[6], &state->board.holes[7], &state->board.holes[8],
         &state->board.holes[9], &state->board.holes[10],
         &state->board.holes[11], &state->board.points[0],
-        &state->board.points[1], &state->board.to_play);
+        &state->board.points[1], (int *)&state->board.to_play);
     current_window->update(state, EV_BOARD_UPDATE);
 }
 void app_on_new_packet(struct app_state* state, struct packet* packet) {
@@ -233,7 +233,7 @@ void app_on_new_packet(struct app_state* state, struct packet* packet) {
         break;
     case PLAYER_ASSIGN:
         sscanf(packet->payload, "%d %" STR(MAX_NAME_LEN) "s",
-               &state->current_player, state->opponent);
+               (int *)&state->current_player, state->opponent);
         app_set_next_window(&board_window);
 
         state->state = PLAY;
@@ -243,7 +243,7 @@ void app_on_new_packet(struct app_state* state, struct packet* packet) {
     case SPEC_ASSIGN:
         sscanf(packet->payload,
                "%d %" STR(MAX_NAME_LEN) "s %" STR(MAX_NAME_LEN) "s",
-               &state->current_player, state->spectated, state->opponent);
+               (int *)&state->current_player, state->spectated, state->opponent);
         app_set_next_window(&board_window);
 
         state->state = SPECTATOR;
