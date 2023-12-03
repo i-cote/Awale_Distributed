@@ -16,9 +16,9 @@ in the latter case a new game is started.
 ⚠️ The project depends on ncurses, make sure it is installed on your system. 
 <br>Normally this shouldn't be a problem, ncurses comes by default with every linux distribution.
 
-Clone this repo, cd into it and run make to build the client and server binaries <br>
+Run make to build the client and server binaries <br>
 ```
-git clone https://github.com/i-cote/Awale_Distributed.git && cd Awale_Distributed && make 
+make 
 ```
 You will now find the binaries `client` and `server` in `build/bin`
 
